@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>多语言随机字符生成器</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#30283e;background:#faf7ff;--purple:#6950a6;--panel:#eee8f3}
+*{box-sizing:border-box}
+body{margin:0;padding:28px}
+main{max-width:1120px;margin:auto;padding:32px;border:6px solid var(--purple);border-radius:30px}
+h1{font-size:25px;margin:0 0 28px}
+h2{font-size:19px;font-weight:600;margin:0 0 14px}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+label{font-size:16px}
+input[type=number],textarea{font:inherit;border:1px solid transparent;background:var(--panel);border-radius:16px;padding:14px;color:inherit}
+#length{width:260px}
+button{border:0;border-radius:24px;background:var(--purple);color:white;padding:13px 24px;font:600 15px inherit;cursor:pointer}
+button:hover{background:#573e93}
+button:disabled{opacity:.45;cursor:not-allowed}
+.clearable{position:relative;min-width:0}
+.clearable textarea{display:block;padding-right:52px}
+.clearable #length{padding-right:68px}
+.clear-field{position:absolute;right:10px;top:10px;width:32px;height:32px;padding:0;border-radius:50%;background:transparent;color:var(--purple);font-size:22px;line-height:1}
+.clear-field:hover{background:#ded4ed}
+.length-field .clear-field{right:30px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid #b99ae7;outline-offset:3px}
+.grid{display:grid;grid-template-columns:3fr 1fr;gap:24px;margin-top:28px}
+.options{background:var(--panel);border-radius:23px;padding:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.options-head{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:14px}
+.options-head h2{margin:0}
+.selection-actions{display:flex;align-items:center;gap:4px}
+.selection-actions button{background:transparent;color:var(--purple);padding:6px 8px;border-radius:8px;font-size:14px}
+.selection-actions button:hover{background:var(--panel)}
+.option label{display:flex;gap:9px;align-items:center;font-size:14px;cursor:pointer}
+input[type=checkbox]{accent-color:var(--purple);width:16px;height:16px}
+.controls{display:flex;align-items:center;gap:8px;margin-top:13px}
+input[type=range]{width:100%;min-width:0;accent-color:var(--purple)}
+.percent{width:60px!important;padding:5px!important;border-radius:7px!important;background:#faf7ff!important;text-align:center}
+.controls:has(input:disabled){opacity:.35}
+textarea{width:100%;resize:vertical;line-height:1.7}
+#prefix{min-height:260px}
+.wrap-settings{border:0;padding:0;margin:16px 0 0;min-width:0}
+.wrap-settings legend{font-size:14px;margin-bottom:8px}
+.wrap-settings label{font-size:14px;margin-right:12px}
+.wrap-settings input[type=radio]{accent-color:var(--purple)}
+.line-length-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+#line-length{width:120px;min-width:0;padding:8px}
+#line-length:disabled{opacity:.4;cursor:not-allowed}
+.result-head{display:flex;align-items:center;justify-content:space-between;margin:28px 0 14px;gap:12px}
+.result-head h2{margin:0}
+#result{min-height:230px;unicode-bidi:plaintext;overflow-wrap:anywhere}
+.meta{display:flex;justify-content:space-between;gap:16px;margin-top:10px;font-size:14px;color:#71677f}
+#error{color:#aa2648;min-height:22px;font-size:14px;margin-top:10px}
+.hint{color:#71677f;font-size:13px;line-height:1.7;margin:12px 0 0}
+#breakdown{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tag{background:var(--panel);border-radius:20px;padding:6px 11px;font-size:12px}
+@media(max-width:760px){body{padding:12px}main{padding:22px 16px;border-width:4px}.grid{grid-template-columns:1fr}.options{grid-template-columns:repeat(2,minmax(0,1fr));padding:18px;gap:20px}#prefix{min-height:110px}#length{width:100%}.top label{width:100%}.meta{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<main>
+<h1>多语言随机字符生成器</h1>
+<div class="top">
+<label for="length">字符长度</label>
+<div class="clearable length-field">
+<input id="length" type="number" min="1" max="1000000" step="1" value="100">
+<button id="clear-length" class="clear-field" type="button" aria-label="清除字符长度" title="清除字符长度">×</button>
+</div>
+<button id="generate">＋ 生成</button>
+<button id="reset" type="button">重置</button>
+</div>
+<div id="error" role="alert"></div>
+<div class="grid">
+<section>
+<div class="options-head">
+<h2>语言与符号</h2>
+<div class="selection-actions" role="group" aria-label="批量选择语言与符号">
+<button id="select-all" type="button">全选</button>
+<button id="invert-selection" type="button">反选</button>
+<button id="clear-selection" type="button">清空</button>
+</div>
+</div>
+<div class="options" id="options"></div>
+<p class="hint">勾选后自动均分至 100%；调整一项时，其余已选项按原比例自动调整。</p>
+</section>
+<section>
+<h2><label for="prefix">指定内容</label></h2>
+<div class="clearable">
+<textarea id="prefix" placeholder="可选，原样放在结果最前面" dir="auto"></textarea>
+<button id="clear-prefix" class="clear-field" type="button" aria-label="清除指定内容" title="清除指定内容">×</button>
+</div>
+<p class="hint">指定内容占用目标长度，剩余长度按比例生成。</p>
+<fieldset class="wrap-settings">
+<legend>是否换行</legend>
+<label><input type="radio" name="line-wrap" id="wrap-no" checked> 否</label>
+<label><input type="radio" name="line-wrap" id="wrap-yes"> 是</label>
+<div class="line-length-row">
+<label for="line-length">每行字符</label>
+<input id="line-length" type="text" inputmode="numeric" pattern="[1-9][0-9]*" disabled aria-describedby="wrap-hint">
+</div>
+<p class="hint" id="wrap-hint">填写正整数，留空则不换行。字符长度不计换行符。</p>
+</fieldset>
+</section>
+</div>
+<div class="result-head">
+<h2><label for="result">生成结果</label></h2>
+<button id="copy" disabled>复制</button>
+</div>
+<div class="clearable">
+<textarea id="result" dir="auto" placeholder="生成结果可手动编辑"></textarea>
+<button id="clear-result" class="clear-field" type="button" aria-label="清除生成结果" title="清除生成结果">×</button>
+</div>
+<div class="meta">
+<span>字符长度：<strong id="count">0</strong></span>
+<span id="status" role="status" aria-live="polite"></span>
+</div>
+<div id="breakdown"></div>
+</main>
+<script>
+const definitions = [
+ ['zh','简体中文','中国语言测试生成字符内容世界你好学习工作生活时间快乐山水城市春夏秋冬风雨天地人物科技信息数据网络系统功能页面按钮输入输出长度选择'],
+ ['en','英语','abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'],
+ ['tw','繁体中文','國語學習測試產生字元內容世界歡迎時間快樂資訊數據網絡系統功能頁面選擇長度電腦軟體開發確認結果臺灣藝術閱讀書寫萬與這個們體驗'],
+ ['vi','越南语','abcdefghijklmnopqrstuvwxyzăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ'],
+ ['fa','波斯语','ابتثجچحخدذرزژسشصضطظعغفقکگلمنوهیپ'],
+ ['ar','阿拉伯语','ابتثجحخدذرزسشصضطظعغفقكلمنهويءأإآةى'],
+ ['ru','俄语','абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'],
+ ['uk','乌克兰语','абвгґдеєжзиіїйклмнопрстуфхцчшщьюяАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ'],
+ ['de','德语','abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZäöüÄÖÜß'],
+ ['symbol','特殊符号','!@#$%^&*()_+-=[]{}|;:\'",.<>/?~`\\！￥…（）—【】、；：“”‘’《》？。']
+];
+const $ = id => document.getElementById(id);
+const items = definitions.map(([id,label,pool],i)=>({
+ id,label,pool:Array.from(new Set(Array.from(pool.normalize('NFC')))),
+ selected:i===0,percent:i===0?100:0
+}));
+const selected=()=>items.filter(x=>x.selected);
+
+// 最大余数法：总数始终精确等于 total，同余时优先补给后面的项目。
+function allocate(total,weights){
+ if(!weights.length)return [];
+ let sum=weights.reduce((a,b)=>a+b,0);
+ if(!sum){weights=weights.map(()=>1);sum=weights.length;}
+ const raw=weights.map(w=>total*w/sum);
+ const out=raw.map(Math.floor);
+ const order=raw.map((v,i)=>({i,r:v-out[i]}))
+   .sort((a,b)=>b.r-a.r||b.i-a.i);
+ let remaining=total-out.reduce((a,b)=>a+b,0);
+ for(let i=0;i<remaining;i++)out[order[i].i]++;
+ return out;
+}
+function equalize(){
+ const active=selected(),values=allocate(100,active.map(()=>1));
+ items.forEach(x=>x.percent=0);
+ active.forEach((x,i)=>x.percent=values[i]);
+ sync();
+}
+for(const [id,select] of [
+ ['select-all',()=>true],
+ ['invert-selection',item=>!item.selected],
+ ['clear-selection',()=>false]
+]){
+ $(id).addEventListener('click',()=>{
+   items.forEach(item=>item.selected=select(item));
+   equalize();
+ });
+}
+function adjust(item,value){
+ const active=selected();
+ if(active.length===1){item.percent=100;sync();return;}
+ value=Math.max(0,Math.min(100,Math.round(Number(value)||0)));
+ const others=active.filter(x=>x!==item);
+ const values=allocate(100-value,others.map(x=>x.percent));
+ item.percent=value;
+ others.forEach((x,i)=>x.percent=values[i]);
+ sync();
+}
+for(const item of items){
+ const node=document.createElement('div');
+ node.className='option';
+ node.innerHTML=`
+ <label><input type="checkbox" id="check-${item.id}">${item.label}</label>
+ <div class="controls">
+ <input type="range" min="0" max="100" step="1" id="range-${item.id}" aria-label="${item.label}占比">
+ <input type="number" min="0" max="100" step="1" class="percent" id="percent-${item.id}" aria-label="${item.label}占比百分数"><span>%</span>
+ </div>`;
+ $('options').appendChild(node);
+ $('check-'+item.id).addEventListener('change',e=>{
+   item.selected=e.target.checked;equalize();
+ });
+ $('range-'+item.id).addEventListener('input',e=>adjust(item,e.target.value));
+ $('percent-'+item.id).addEventListener('change',e=>adjust(item,e.target.value));
+}
+function sync(){
+ for(const item of items){
+   $('check-'+item.id).checked=item.selected;
+   for(const type of ['range','percent']){
+     const el=$(type+'-'+item.id);
+     el.value=item.percent;
+     el.disabled=!item.selected;
+   }
+ }
+}
+sync();
+
+const contentLength=value=>Array.from(value.replace(/[\r\n]/g,'')).length;
+function syncWrap(){
+ $('line-length').disabled=!$('wrap-yes').checked;
+ if($('line-length').disabled)$('line-length').value='';
+}
+for(const id of ['wrap-no','wrap-yes'])$(id).addEventListener('change',syncWrap);
+$('line-length').addEventListener('input',()=>{
+ $('line-length').value=$('line-length').value.replace(/[^0-9]/g,'').replace(/^0+/,'');
+});
+
+$('reset').addEventListener('click',()=>{
+ $('wrap-no').checked=true;
+ $('wrap-yes').checked=false;
+ syncWrap();
+ $('length').value=$('length').defaultValue;
+ items.forEach((item,i)=>{
+   item.selected=i===0;
+   item.percent=i===0?100:0;
+ });
+ sync();
+ $('prefix').value='';
+ $('result').value='';
+ $('count').textContent='0';
+ $('copy').disabled=true;
+ $('copy').textContent='复制';
+ $('error').textContent='';
+ $('status').textContent='';
+ $('breakdown').replaceChildren();
+});
+
+// 拒绝采样，避免取模造成随机分布偏差。
+let buffer=new Uint32Array(4096),cursor=buffer.length;
+function randomInt(max){
+ const limit=4294967296-(4294967296%max);
+ let value;
+ do{
+   if(cursor===buffer.length){crypto.getRandomValues(buffer);cursor=0;}
+   value=buffer[cursor++];
+ }while(value>=limit);
+ return value%max;
+}
+$('generate').addEventListener('click',()=>{
+ $('error').textContent='';
+ $('status').textContent='';
+ const length=Number($('length').value);
+ const lineValue=$('line-length').value;
+ const lineLength=$('wrap-yes').checked&&lineValue!==''?Number(lineValue):0;
+ if($('wrap-yes').checked&&lineValue!==''&&(!/^[1-9][0-9]*$/.test(lineValue)||!Number.isSafeInteger(lineLength))){
+   $('error').textContent='每行字符请输入有效的正整数。';return;
+ }
+ if(!$('length').value||!Number.isInteger(length)||length<1||length>1000000){
+   $('error').textContent='请输入 1～1,000,000 之间的整数字符长度。';return;
+ }
+ // 保留指定内容原文，以 Unicode 码点计数，包含空格及换行。
+ const prefix=$('prefix').value;
+ const prefixLength=contentLength(prefix);
+ if(prefixLength>length){
+   $('error').textContent=`指定内容已有 ${prefixLength} 个字符，超过目标长度。`;return;
+ }
+ const active=selected(),remaining=length-prefixLength;
+ if(remaining&&!active.length){
+   $('error').textContent='请至少选择一种语言或特殊符号。';return;
+ }
+ const quotas=allocate(remaining,active.map(x=>x.percent));
+ const generated=[];
+ active.forEach((item,i)=>{
+   for(let n=0;n<quotas[i];n++)generated.push(item.pool[randomInt(item.pool.length)]);
+ });
+ // 打散生成部分，指定内容始终位于最前面。
+ for(let i=generated.length-1;i>0;i--){
+   const j=randomInt(i+1);
+   [generated[i],generated[j]]=[generated[j],generated[i]];
+ }
+ const content=prefix+generated.join('');
+ $('result').value=lineLength?content.split('\n').map(line=>{
+   const chars=Array.from(line),lines=[];
+   for(let i=0;i<chars.length;i+=lineLength)lines.push(chars.slice(i,i+lineLength).join(''));
+   return lines.join('\n');
+ }).join('\n'):content;
+ $('count').textContent=contentLength($('result').value).toLocaleString('zh-CN');
+ $('copy').disabled=false;
+ $('copy').textContent='复制';
+ $('breakdown').replaceChildren();
+ const tags=[];
+ if(prefixLength)tags.push(`指定内容：${prefixLength} 字符`);
+ active.forEach((x,i)=>tags.push(`${x.label} ${x.percent}%：${quotas[i]} 字符`));
+ tags.forEach(text=>{
+   const span=document.createElement('span');
+   span.className='tag';span.textContent=text;
+   $('breakdown').appendChild(span);
+ });
+ $('status').textContent='生成完成';
+});
+$('result').addEventListener('input',()=>{
+ const value=$('result').value;
+ $('count').textContent=contentLength(value).toLocaleString('zh-CN');
+ $('copy').disabled=value.length===0;
+ $('status').textContent='结果已手动编辑';
+ // 手动编辑后，原生成配额不再代表当前内容。
+ $('breakdown').replaceChildren();
+});
+for(const id of ['length','prefix','result']){
+ $('clear-'+id).addEventListener('click',()=>{
+   $(id).value='';
+   if(id==='result'){
+     $('count').textContent='0';
+     $('copy').disabled=true;
+     $('status').textContent='';
+     $('breakdown').replaceChildren();
+   }else{
+     $('error').textContent='';
+   }
+   $(id).focus();
+ });
+}
+$('copy').addEventListener('click',async()=>{
+ const value=$('result').value;
+ try{
+   if(navigator.clipboard&&window.isSecureContext){
+     await navigator.clipboard.writeText(value);
+   }else{
+     $('result').focus();$('result').select();
+     if(!document.execCommand('copy'))throw new Error('copy failed');
+     $('result').setSelectionRange(0,0);
+   }
+   $('status').textContent='已复制到剪贴板';
+ }catch{
+   $('result').focus();$('result').select();
+   $('status').textContent='自动复制失败，已选中结果，请按 Ctrl+C / ⌘C 复制。';
+ }
+});
+</script>
+</body>
+</html>
